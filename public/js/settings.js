@@ -397,6 +397,7 @@ const FIELD_IDS = [
   'opportunistic_charge_limit_pct', 'opportunistic_weak_ratio_pct',
   'anthropic_api_key',
   'fleet_telemetry_hostname', 'fleet_telemetry_port', 'fleet_telemetry_ca_cert',
+  'fleet_telemetry_extra_fields',
   'google_calendar_client_id', 'google_calendar_client_secret', 'google_calendar_redirect_uri',
   'outlook_calendar_client_id', 'outlook_calendar_client_secret', 'outlook_calendar_tenant_id',
   'outlook_calendar_redirect_uri',
@@ -1838,6 +1839,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const telHostInput = document.getElementById('setting_fleet_telemetry_hostname');
   const telPortInput = document.getElementById('setting_fleet_telemetry_port');
   const telCaInput   = document.getElementById('setting_fleet_telemetry_ca_cert');
+  const telExtraInput = document.getElementById('setting_fleet_telemetry_extra_fields');
 
   function showTelMessage(type, text) {
     if (!telMessage) return;
@@ -1860,6 +1862,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fleet_telemetry_hostname: hostname,
           fleet_telemetry_port: telPortInput?.value?.trim() || '443',
           fleet_telemetry_ca_cert: telCaInput?.value?.trim() || '',
+          fleet_telemetry_extra_fields: telExtraInput?.value?.trim() || '',
         },
       });
       telSendBtn.disabled = true;

@@ -746,6 +746,13 @@
             placeholder="Leave blank to use the Let's Encrypt E7 intermediate (default). Paste your CA's intermediate cert here if you're not using Let's Encrypt."
             style="font-family:'JetBrains Mono',monospace;font-size:0.75rem"></textarea>
         </div>
+        <div class="form-group">
+          <label for="setting_fleet_telemetry_extra_fields">Extra fields <span style="font-weight:400;color:var(--text-secondary)">(optional)</span></label>
+          <textarea id="setting_fleet_telemetry_extra_fields" rows="3"
+            placeholder='Extra signals for other consumers of this stream, as JSON: {"Odometer": 60, "Gear": 60}. Names must match Tesla&#39;s Field enum exactly - one typo and Tesla rejects the whole config.'
+            style="font-family:'JetBrains Mono',monospace;font-size:0.75rem"></textarea>
+          <span class="text-secondary text-xs mt-1">The car holds one telemetry config, so anything else reading this stream needs its fields listed here. WattSnatch's own seven are always included and cannot be overridden.</span>
+        </div>
         <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
           <button type="button" id="telemetry-send-btn" class="btn btn-secondary btn-sm">Send Config to Tesla</button>
         </div>

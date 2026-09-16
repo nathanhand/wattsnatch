@@ -82,6 +82,51 @@ async function getConfigStatus() {
   });
 }
 
+// These seven are what the charging controller reads: ChargeAmps and DetailedChargeState
+// drive the control loop, Soc and ChargeLimitSoc decide when to stop, ChargerVoltage and
+// ACChargingPower size the power calculation, and Location answers "is the car at home".
+//
+// The car holds exactly ONE telemetry config, so anything else subscribing to the same
+// stream (a TeslaMate bridge, an MQTT feed) needs its fields in here too - and before the
+// fleet_telemetry_extra_fields setting existed, re-sending the config from Settings (or the
+// auto-repair path above) silently deleted them.
+//
+// Extras merge UNDER the built-ins, never over: a user who put ChargeAmps at 3600 in the
+// extras box would otherwise break charge control with nothing in the UI to explain why.
+const BUILTIN_TELEMETRY_FIELDS = {
+  ChargeAmps:          { interval_seconds: 1  },
+  DetailedChargeState: { interval_seconds: 1  },
+  Soc:                 { interval_seconds: 30 },
+  ChargeLimitSoc:      { interval_seconds: 60 },
+  ChargerVoltage:      { interval_seconds: 30 },
+  ACChargingPower:     { interval_seconds: 5  },
+  Location:            { interval_seconds: 30 },
+};
+
+// Accepts {"Odometer": 60} or Tesla's own {"Odometer": {"interval_seconds": 60}}.
+// Returns {} on anything unparseable - a malformed extras box must not make the telemetry
+// config unsendable.
+function parseExtraTelemetryFields(raw) {
+  if (!raw || !String(raw).trim()) return {};
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (_e) { return {}; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  const out = {};
+  for (const [name, val] of Object.entries(parsed)) {
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) continue;
+    const secs = typeof val === 'number' ? val
+               : (val && typeof val === 'object' ? val.interval_seconds : NaN);
+    const n = parseInt(secs, 10);
+    if (Number.isFinite(n) && n >= 1 && n <= 3600) out[name] = { interval_seconds: n };
+  }
+  return out;
+}
+
+function buildTelemetryFields() {
+  const extras = parseExtraTelemetryFields(db.getSetting('fleet_telemetry_extra_fields'));
+  return { ...extras, ...BUILTIN_TELEMETRY_FIELDS };
+}
+
 // POST the telemetry config to Tesla via the local signing proxy (localhost:4443).
 // Returns { ok, status, response } or { ok:false, error }. Shared with the setup wizard.
 async function sendConfig() {
@@ -96,21 +141,15 @@ async function sendConfig() {
 
   const port = parseInt(db.getSetting('fleet_telemetry_port') || '443', 10);
   const caCert = db.getSetting('fleet_telemetry_ca_cert') || DEFAULT_LE_CA;
+  const fields = buildTelemetryFields();
   const payload = JSON.stringify({
     vins: [vin],
-    config: {
-      hostname, port, ca: caCert,
-      fields: {
-        ChargeAmps:          { interval_seconds: 1  },
-        DetailedChargeState: { interval_seconds: 1  },
-        Soc:                 { interval_seconds: 30 },
-        ChargeLimitSoc:      { interval_seconds: 60 },
-        ChargerVoltage:      { interval_seconds: 30 },
-        ACChargingPower:     { interval_seconds: 5  },
-        Location:            { interval_seconds: 30 },
-      },
-    },
+    config: { hostname, port, ca: caCert, fields },
   });
+
+  // Tesla rejects the WHOLE config on one unrecognised field name, so record what was sent -
+  // otherwise a typo in the extras box is undiagnosable.
+  logger.logEvent('info', `fleet_telemetry_config fields: ${Object.keys(fields).sort().join(', ')}`);
 
   const agent = new https.Agent({ rejectUnauthorized: false });
   return new Promise((resolve) => {

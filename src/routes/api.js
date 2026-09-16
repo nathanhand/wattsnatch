@@ -394,6 +394,7 @@ router.post('/api/settings', (req, res) => {
       'tesla_battery_kwh', 'soc_floor_pct',
       'panel_nicknames',
       'fleet_telemetry_hostname', 'fleet_telemetry_port', 'fleet_telemetry_ca_cert',
+      'fleet_telemetry_extra_fields',
       'inverter_brand', 'fronius_ip', 'solaredge_api_key', 'solaredge_site_id',
       'mqtt_in_broker_url', 'mqtt_in_username', 'mqtt_in_password',
       'mqtt_in_topic_solar', 'mqtt_in_second_type', 'mqtt_in_topic_second',
